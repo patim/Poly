@@ -1,6 +1,7 @@
 (* ::Package:: *)
 
 BeginPackage["PolyRoots`"]
+Print["Set $MinPrecision!"];
 \[Omega]up::usage="";
 
 
@@ -22,7 +23,7 @@ DetZeroOvertone::usage="";
 Unprotect[s];
 s = -2;
 Protect[s];
-Protect[RFMethod, a0, fpm, bisec, newton, Eps, Points, Upper];
+Protect[RFMethod, a0, fpm, bisec, newton, Eps, Points, Upper, AutoSave];
 
 
 Begin["Private`"]
@@ -445,7 +446,7 @@ DetZeros2[a1_, a2_, polyN_, ind_, m_, opts:OptionsPattern[]] :=
   ]
 
 
-Options[DetZerosForN] = Options[DetZeros2];
+Options[DetZerosForN] = Union[{AutoSave->10}, Options[DetZeros2]];
 DetZerosForN[a1_, a2_, N1_, N2_, ind_, m_, opts : OptionsPattern[]] := 
  Module[{iN, iNroots, \[Omega], points, up, ptsadd = 25, Nstart},
   If[Head[Global`finroots]==Symbol, Global`finroots = {}];
@@ -477,7 +478,7 @@ DetZerosForN[a1_, a2_, N1_, N2_, ind_, m_, opts : OptionsPattern[]] :=
     Clear[Global`roots];
     Print["temporary roots cleared for N=", iN];
    ];
-   If[Mod[iN, 10] == 0,
+   If[Mod[iN, OptionValue[AutoSave]] == 0,
     Save["AutoSaveRootsInd"<>ToString[ind]<>"N"<>ToString[iN], Global`finroots];
     Print["Saved data for N=", iN];
     ];

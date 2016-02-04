@@ -1,5 +1,10 @@
 (* ::Package:: *)
 
+(*
+Polynomial roots calculator
+
+Maxim Zalutskiy, 2016
+*)
 BeginPackage["PolyRoots`"]
 Print["Set $MinPrecision!"];
 \[Omega]up::usage="";
@@ -9,21 +14,33 @@ Print["Set $MinPrecision!"];
 Mconstruct::usage="";
 MySpec::usage="";
 Det2::usage="";
-DetPlot2::usage="DetPlot2[a1, a2, NN, ind, m, opts:OptionsPattern[]]"<>
-" plots the determinant function between a1 and a2 for NN, ind (l) and m.";
 Bisec::usage="";
 FPM::usage="";
 DetZero::usage="";
 BraDetZeros::usage="";
 DetZeros2::usage="";
-DetZerosForN::usage="DetZerosForN[a1, a2, N1, N2, ind, m]. The value of ind is related to l";
+DetZerosForN::usage = "DetZerosForN[a1, a2, N1, N2, ind, m]. The value of ind is related to l";
 DetZeroOvertone::usage="";
+DetPlot2::usage="DetPlot2[a1, a2, NN, ind, m] plots the determinant function between a1 and"<>
+" a2 for NN, ind (l) and m.";
+ZerosPlot::usage = "ZerosPlot[uzeros, dzeros] plots polynomial solutions of the 1st kind "<>
+"(users) and 2nd kind (dzeros) \nOptions: OmegaLines, default True, plots imaginary "<>
+"\[Omega](a); Plot options; PlotList options";
+MinZerosPlot::usage = "MinZerosPlot[findMin] plots negative axis QNM. \nOptions: myColor,"<>
+" default True; PlotList options";
+MinZerosPlot2::usage = "Similar to MinZerosPlot, but works with Greg's data type";
+ZerosPlotNum::usage = "ZerosPlotNum[uzeros, dzeros, nums] plots both types of polynomial roots"<>
+" along with QNM roots. Options: OmegaLines, default True, plots -Im[\[Omega](a)] dependence; Plot"<>
+" options;PlotList options.";
+ZerosPlotNum2::usage = "ZerosPlotNum[uzeros, dzeros, nums, l, polyNst, polyNfin] plots both "<>
+"types of polynomial roots along with QNM roots. Options: OmegaLines, default True, plots "<>
+"-Im[\[Omega](a)] dependence; Plot options;PlotList options.";
 
 
 Unprotect[s];
 s = -2;
 Protect[s];
-Protect[RFMethod, a0, fpm, bisec, newton, Eps, Points, Upper, AutoSave];
+Protect[RFMethod, a0, fpm, bisec, newton, Eps, Points, Upper, AutoSave, OmegaLines, myColor];
 
 
 Begin["Private`"]
@@ -101,30 +118,6 @@ Det2[matr_] := Module[{u, w, v, wdiag, det, sign},
   sign = Det[SetPrecision[u.v, $MinPrecision]];
   det = sign*wdiag[[Position[Ordering[wdiag], 1][[1]]]][[1]];
   det
-  ]
-
-
-Options[DetPlot2] = 
-  Union[{Points -> 250}, {Upper -> True}, Options[ListPlot]];
-DetPlot2[a1_, a2_, NN_, ind_, m_, opts : OptionsPattern[]] := 
- Module[{a, detList = {}, prec = $MinPrecision, M, da, det, aroot, c, 
-   A, trncN = 4, \[Omega], up},
-  up = OptionValue[Upper];
-  c[a_] := Module[{\[Omega]},
-    \[Omega] = If[up, \[Omega]up[m, a, NN], \[Omega]down[NN]];
-    N[a*\[Omega], prec]];
-  da = N[(a2 - a1)/OptionValue[Points], prec];
-  
-  For[a = SetPrecision[a1, $MinPrecision], 
-   a <= SetPrecision[a2, $MinPrecision], 
-   a = SetPrecision[a + da, $MinPrecision],
-   A = MySpec[trncN, ind, m, c[a], 10^-12];
-   M = Mconstruct[m, a, NN, A, up];
-   det = Det[M];
-   detList = Join[detList, {{a, det}}];
-   ];
-  (*Print["det: ", Precision[det], " a: ", Precision[a]];*)
-  ListPlot[detList, FilterRules[{opts}, Options[ListPlot]]]
   ]
 
 
@@ -484,6 +477,129 @@ DetZerosForN[a1_, a2_, N1_, N2_, ind_, m_, opts : OptionsPattern[]] :=
     ];
    ];
   Global`finroots
+  ]
+
+
+(*Graphics functions*)
+Options[DetPlot2] = 
+  Union[{Points -> 250}, {Upper -> True}, Options[ListPlot]];
+DetPlot2[a1_, a2_, NN_, ind_, m_, opts : OptionsPattern[]] := 
+ Module[{a, detList = {}, prec = $MinPrecision, M, da, det, aroot, c, 
+   A, trncN = 4, \[Omega], up},
+  up = OptionValue[Upper];
+  c[a_] := Module[{\[Omega]},
+    \[Omega] = If[up, \[Omega]up[m, a, NN], \[Omega]down[NN]];
+    N[a*\[Omega], prec]];
+  da = N[(a2 - a1)/OptionValue[Points], prec];
+  
+  For[a = SetPrecision[a1, $MinPrecision], 
+   a <= SetPrecision[a2, $MinPrecision], 
+   a = SetPrecision[a + da, $MinPrecision],
+   A = MySpec[trncN, ind, m, c[a], 10^-12];
+   M = Mconstruct[m, a, NN, A, up];
+   det = Det[M];
+   detList = Join[detList, {{a, det}}];
+   ];
+  (*Print["det: ", Precision[det], " a: ", Precision[a]];*)
+  ListPlot[detList, FilterRules[{opts}, Options[ListPlot]]]
+  ]
+
+
+Options[ZerosPlot] = 
+  Union[{OmegaLines -> True}, Options[Plot], Options[ListPlot]];
+ZerosPlot[uzeros_, dzeros_, opts : OptionsPattern[]] := 
+ Module[{i, j, ulist, dlist, legends, up, dup, ulp, dlp, a, utablep, 
+   dtablep, popts, out, uzLength, dzLength},
+  uzLength = Length[uzeros];
+  ulist = Table[{uzeros[[i, 1, j, 1]], -Im[uzeros[[i, 1, j, 2]]]}, 
+		  {i, 1,uzLength}, {j, 1, Length[uzeros[[i, 1]]]}];
+  utablep = Table[-Im[\[Omega]up[uzeros[[i, 2, 3]], a, uzeros[[i, 2, 1]]]], {i, 1, uzLength}];
+  
+  dzLength = Length[dzeros];
+  dlist = Table[{dzeros[[i, 1, j, 1]], -Im[dzeros[[i, 1, j, 2]]]}, {i, 1, dzLength}, 
+				 {j, 1, Length[dzeros[[i, 1]]]}];
+  
+  dtablep = Table[{-Im[\[Omega]down[dzeros[[i, 2, 1]]]]}, {i, 1, dzLength}];
+  popts = {Frame -> True};
+  (*legends=Table["N="<>ToString[i],{i,N1,N1+Length[list]}];*)
+  
+  ulp = ListPlot[ulist, FilterRules[{opts}, Options[ListPlot]], PlotStyle -> PointSize[0.006]];
+  (*marker1=Graphics[Polygon[{{1,0},{0,Sqrt[3]},{-1,0}}]];
+  dlp=ListPlot[dlist,PlotMarkers\[Rule]{marker1,.016}];*)
+  
+  dlp = ListPlot[dlist, PlotMarkers -> {"\!\(\*StyleBox[\"\[FilledUpTriangle]\",\nFontSize->16]\)"}];
+  If[OptionValue[OmegaLines],
+   up = Plot[utablep, {a, 0, 1}, 
+     Evaluate[FilterRules[{opts}, Options[Plot]]]];
+   dup = Plot[dtablep, {a, 0, 1}, PlotStyle -> {{Dashed, Gray}}, 
+     Evaluate[FilterRules[{opts}, Options[Plot]]]];
+   out = Show[up, dup, ulp, dlp];
+   (*out=Show[up,ulp];*)
+   ,
+   out = Show[ulp, dlp];
+   ];
+  out
+  ]
+
+
+(*for my findMin data type*)
+Options[MinZerosPlot] = Union[{myColor -> Blue}, Options[ListPlot]];
+MinZerosPlot[findMin_, opts : OptionsPattern[]] := 
+ Module[{data, marker1},
+  marker1 = Graphics[{OptionValue[myColor], Circle[]}];
+  (*take the interpolated values for a and Im(\[Omega])*)
+  
+  data = Table[{findMin[[2, i, 2]], -Im[findMin[[2, i, 3]]]}, {i, 1, Length[findMin[[2]]]}];
+  ListPlot[data, PlotMarkers -> {marker1, .035}, FilterRules[{opts}, Options[ListPlot]]]
+  ]
+
+
+(*for Greg's findMin data type*)
+Options[MinZerosPlot2] = Union[{myColor -> Blue}, Options[ListPlot]];
+MinZerosPlot2[findMin_, opts : OptionsPattern[]] := 
+ Module[{data, marker1},
+  marker1 = Graphics[{OptionValue[myColor], Circle[]}];
+  
+  data = Table[{findMin[[i, 1]], -findMin[[i, 2]]}, {i, 1, Length@findMin}];
+  ListPlot[data, PlotMarkers -> {marker1, .035}, FilterRules[{opts}, Options[ListPlot]]]
+  ]
+
+
+(*for my findMin data type*)
+Options[ZerosPlotNum] = {OmegaLines -> True} \[Union] 
+   Options[Plot] \[Union] Options[ListPlot];
+ZerosPlotNum[uzeros_, dzeros_, nums_, opts : OptionsPattern[]] :=
+ Module[{plots, zplot, colorScheme, ColorScheme},
+  ColorScheme[c_] := Module[{cnew, size,
+     clist = {Red, Orange, Black, Green, Blue, Purple, Brown, Pink}},
+    size = Length[clist];
+    clist[[Mod[c - 1, size] + 1]]
+    ];
+  (* for my nums data type*)
+  plots=Table[MinZerosPlot[nums[[i]], myColor->ColorScheme[i]],{i,1,Length[nums]}];
+
+  zplot = ZerosPlot[uzeros, dzeros, opts, FilterRules[{opts}, Options[ListPlot]]];
+  Show @@ PrependTo[plots, zplot]
+  ]
+
+
+(*for Greg's findMin data type*)
+Options[ZerosPlotNum2] = {OmegaLines -> True} \[Union] 
+   Options[Plot] \[Union] Options[ListPlot];
+ZerosPlotNum2[uzeros_, dzeros_, nums_, l_, polyNst_, polyNfin_, opts : OptionsPattern[]] :=
+ Module[{plots, zplot, colorScheme, ColorScheme},
+  ColorScheme[c_] := Module[{cnew, size,
+     clist = {Red, Orange, Black, Green, Blue, Purple, Brown, Pink}},
+    size = Length[clist];
+    clist[[Mod[c - 1, size] + 1]]
+    ];
+  
+  (*for Greg's data type*)
+  (* polyNst = 25; polyNfin = 31;*)
+  plots = Table[MinZerosPlot2[nums[l, i+polyNst-1], myColor -> ColorScheme[i]], 
+			{i, 1, polyNfin-polyNst+1}];
+  zplot = ZerosPlot[uzeros, dzeros, opts, FilterRules[{opts}, Options[ListPlot]]];
+  Show @@ PrependTo[plots, zplot]
   ]
 
 

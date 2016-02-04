@@ -35,6 +35,7 @@ ZerosPlotNum::usage = "ZerosPlotNum[uzeros, dzeros, nums] plots both types of po
 ZerosPlotNum2::usage = "ZerosPlotNum[uzeros, dzeros, nums, l, polyNst, polyNfin] plots both "<>
 "types of polynomial roots along with QNM roots. Options: OmegaLines, default True, plots "<>
 "-Im[\[Omega](a)] dependence; Plot options;PlotList options.";
+APlot::usage = "APlot[uAzeros, dAzeros, nums, l, polyNst, polyNfin, ListPlot_options]";
 
 
 Unprotect[s];
@@ -542,6 +543,24 @@ ZerosPlot[uzeros_, dzeros_, opts : OptionsPattern[]] :=
   ]
 
 
+Options[AZerosPlot] = Options[ListPlot];
+AZerosPlot[uzeros_, dzeros_, opts : OptionsPattern[]] := 
+ Module[{i, j, ulist, dlist, legends, up, dup, ulp, dlp, a, popts, out, uzLength, dzLength},
+  uzLength = Length[uzeros];
+  ulist = Table[{uzeros[[i, 1, j, 1]], Re[uzeros[[i, 1, j, 4]]]}, 
+		  {i, 1,uzLength}, {j, 1, Length[uzeros[[i, 1]]]}];
+  
+  dzLength = Length[dzeros];
+  dlist = Table[{dzeros[[i, 1, j, 1]], Re[dzeros[[i, 1, j, 4]]]}, {i, 1, dzLength}, 
+				 {j, 1, Length[dzeros[[i, 1]]]}];
+  
+  ulp = ListPlot[ulist, FilterRules[{opts}, Options[ListPlot]], PlotStyle -> PointSize[0.006]]; 
+  dlp = ListPlot[dlist, PlotMarkers -> {"\!\(\*StyleBox[\"\[FilledUpTriangle]\",\nFontSize->16]\)"}];
+  out = Show[ulp, dlp];
+  out
+  ]
+
+
 (*for my findMin data type*)
 Options[MinZerosPlot] = Union[{myColor -> Blue}, Options[ListPlot]];
 MinZerosPlot[findMin_, opts : OptionsPattern[]] := 
@@ -565,16 +584,30 @@ MinZerosPlot2[findMin_, opts : OptionsPattern[]] :=
   ]
 
 
+(*for Greg's findMin data type*)
+Options[AMinZerosPlot2] = Union[{myColor -> Blue}, Options[ListPlot]];
+AMinZerosPlot2[findMin_, opts : OptionsPattern[]] := 
+ Module[{data, marker1},
+  marker1 = Graphics[{OptionValue[myColor], Circle[]}];
+  
+  data = Table[{findMin[[i, 1]], findMin[[i, 3]]}, {i, 1, Length@findMin}];
+  ListPlot[data, PlotMarkers -> {marker1, .035}, FilterRules[{opts}, Options[ListPlot]]]
+  ]
+
+
+ColorScheme[c_] := Module[{cnew, size, clist = 
+										{Red, Orange, Black, Green, Blue, Purple, Brown, Pink}},
+  size = Length[clist];
+  clist[[Mod[c - 1, size] + 1]]
+];
+
+
 (*for my findMin data type*)
 Options[ZerosPlotNum] = {OmegaLines -> True} \[Union] 
    Options[Plot] \[Union] Options[ListPlot];
 ZerosPlotNum[uzeros_, dzeros_, nums_, opts : OptionsPattern[]] :=
- Module[{plots, zplot, colorScheme, ColorScheme},
-  ColorScheme[c_] := Module[{cnew, size,
-     clist = {Red, Orange, Black, Green, Blue, Purple, Brown, Pink}},
-    size = Length[clist];
-    clist[[Mod[c - 1, size] + 1]]
-    ];
+ Module[{plots, zplot},
+
   (* for my nums data type*)
   plots=Table[MinZerosPlot[nums[[i]], myColor->ColorScheme[i]],{i,1,Length[nums]}];
 
@@ -587,20 +620,22 @@ ZerosPlotNum[uzeros_, dzeros_, nums_, opts : OptionsPattern[]] :=
 Options[ZerosPlotNum2] = {OmegaLines -> True} \[Union] 
    Options[Plot] \[Union] Options[ListPlot];
 ZerosPlotNum2[uzeros_, dzeros_, nums_, l_, polyNst_, polyNfin_, opts : OptionsPattern[]] :=
- Module[{plots, zplot, colorScheme, ColorScheme},
-  ColorScheme[c_] := Module[{cnew, size,
-     clist = {Red, Orange, Black, Green, Blue, Purple, Brown, Pink}},
-    size = Length[clist];
-    clist[[Mod[c - 1, size] + 1]]
-    ];
-  
-  (*for Greg's data type*)
-  (* polyNst = 25; polyNfin = 31;*)
+ Module[{plots, zplot},  
   plots = Table[MinZerosPlot2[nums[l, i+polyNst-1], myColor -> ColorScheme[i]], 
 			{i, 1, polyNfin-polyNst+1}];
   zplot = ZerosPlot[uzeros, dzeros, opts, FilterRules[{opts}, Options[ListPlot]]];
   Show @@ PrependTo[plots, zplot]
   ]
+
+
+Options[APlot] = Options[ListPlot];
+APlot[uAzeros_,dAzeros_, nums_, l_, polyNst_, polyNfin_, opts:OptionsPattern[]] := 
+	Module[{plots, zplot, colorScheme},  
+  plots = Table[AMinZerosPlot2[nums[l, i+polyNst-1], myColor->ColorScheme[i]], 
+			{i, 1, polyNfin-polyNst+1}];
+  zplot = AZerosPlot[uAzeros, dAzeros, opts, FilterRules[{opts}, Options[ListPlot]]];
+  Show @@ PrependTo[plots, zplot]
+]
 
 
 End[] (*Private*)
